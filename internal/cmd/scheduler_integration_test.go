@@ -863,7 +863,7 @@ func TestSchedulerMultiRigConvoyAutoResolve(t *testing.T) {
 
 	// Wait for bd's issues.jsonl timestamp to settle (same race as
 	// TestSchedulerDirectConvoyDispatch — 1-second granularity stale check).
-	time.Sleep(1100 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	// Dry-run: verify auto-rig-resolution routes each bead correctly.
 	out := runGTCmdOutput(t, gtBinary, hqPath, env, "sling", convoyID, "--dry-run")
@@ -1130,7 +1130,7 @@ func TestSchedulerDirectConvoyDispatch(t *testing.T) {
 	// import timestamp >= jsonl mtime (1-second granularity). Without this,
 	// the sling command flakes with "database out of sync" when the jsonl write
 	// and Dolt import straddle a second boundary.
-	time.Sleep(1100 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	// gt sling <convoy-id> --dry-run in direct mode
 	out := runGTCmdOutput(t, gtBinary, hqPath, env, "sling", convoyID, "--dry-run")
