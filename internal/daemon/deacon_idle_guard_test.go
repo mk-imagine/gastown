@@ -99,16 +99,16 @@ func TestCheckDeaconHeartbeat_IdleGuard(t *testing.T) {
 			desc:             "Nudge must fire when in_progress work exists",
 		},
 		{
-			name:         "hooked work: stale heartbeat, hooked bead — nudge sent",
+			name:         "hooked only: stale heartbeat, patrol wisp — nudge suppressed",
 			heartbeatAge: 10 * time.Minute,
 			stores: map[string]beadsdk.Storage{
 				"hq": &searchStorage{results: map[string][]*beadsdk.Issue{
-					"hooked": {{ID: "sc-def"}},
+					"hooked": {{ID: "hq-wisp-34zi"}},
 				}},
 			},
-			wantNudgeLog:     true,
-			wantIdleGuardLog: false,
-			desc:             "Nudge must fire when hooked work exists",
+			wantNudgeLog:     false,
+			wantIdleGuardLog: true,
+			desc:             "Patrol wisps in hooked state do not count as active work; nudge must be suppressed",
 		},
 		{
 			name:         "store error: stale heartbeat, store fails — nudge sent conservatively",
