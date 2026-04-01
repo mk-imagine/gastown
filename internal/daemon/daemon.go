@@ -1275,7 +1275,7 @@ func (d *Daemon) hasActiveWork() bool {
 	defer cancel()
 
 	for name, store := range d.beadsStores {
-		for _, rawStatus := range []string{"in_progress", "hooked"} {
+		for _, rawStatus := range []string{"in_progress"} {
 			s := beadsdk.Status(rawStatus)
 			filter := beadsdk.IssueFilter{Status: &s, Limit: 1}
 			issues, err := store.SearchIssues(ctx, "", filter)
