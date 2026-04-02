@@ -84,3 +84,6 @@ __pycache__/
 # Dolt database files (added by bd init)
 .dolt/
 *.db
+
+# Fork research notes (private — not for public upstream)
+docs/fork-info/
