@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -155,6 +157,14 @@ var idleWatcherPollInterval = 1 * time.Second
 // For "queue" mode: writes to the nudge queue for cooperative delivery.
 // For "wait-idle" mode: waits for idle, then delivers or falls back to queue.
 func deliverNudge(t *tmux.Tmux, sessionName, message, sender string) error {
+	// Warden HTTP fallback: when running inside a container (no tmux)
+	// and WARDEN_URL is set, route nudges through the Warden API.
+	if os.Getenv("TMUX") == "" {
+		if wardenURL := os.Getenv("WARDEN_URL"); wardenURL != "" {
+			return deliverNudgeViaWarden(wardenURL, sessionName, message, sender)
+		}
+	}
+
 	townRoot, _ := workspace.FindFromCwd()
 
 	// Use the requested mode, but force queue mode for ACP sessions.
@@ -276,6 +286,34 @@ func deliverNudge(t *tmux.Tmux, sessionName, message, sender string) error {
 		}
 		return t.NudgeSessionWithOpts(sessionName, prefixedMessage, opts)
 	}
+}
+
+// deliverNudgeViaWarden sends a nudge through the Warden HTTP API.
+// Used when running inside a container where tmux is not available.
+func deliverNudgeViaWarden(wardenURL, sessionName, message, sender string) error {
+	url := strings.TrimRight(wardenURL, "/") + "/nudge/" + sessionName
+	body := fmt.Sprintf(`{"message":%q,"sender":%q}`, message, sender)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBufferString(body))
+	if err != nil {
+		return fmt.Errorf("warden nudge: creating request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if token := os.Getenv("WARDEN_TOKEN"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("warden nudge: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("warden nudge: HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+	return nil
 }
 
 // watchAndDeliver polls a session for idle state over idleWatcherTimeout.
